@@ -1,0 +1,30 @@
+{
+  "name": "dc6png",
+  "version": "0.0.0",
+  "description": "batch convert diablo 2 dc6 format to png",
+  "main": "src/index.js",
+  "bin": {
+    "dc6png": "src/index.js"
+  },
+  "scripts": {
+    "postversion": "git push && git push --tags"
+  },
+  "dependencies": {
+    "yargs": "^15.1.0",
+    "jimp": "0.9.3",
+    "@jimp/png": "0.9.3"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dschu012/dc6png.git"
+  },
+  "author": "dschu012",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/dschu012/dc6png/issues"
+  },
+  "files": [
+    "src/*"
+  ],
+  "homepage": "https://github.com/dschu012/dc6png#readme"
+}
