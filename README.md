@@ -2,12 +2,6 @@
 
 batch convert diablo 2 dc6 format to png
 
-#### Install
-
-```
-npm install -g dc6png
-```
-
 #### Usage
 
 ```
