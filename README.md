@@ -18,7 +18,6 @@ Options:
                                                                       [required]
   -t, --transform        transform file. example: (invgreybrown.dat)
   -c, --transform-color  transform color. (0-20)                        [number]
-  -d, --dir              directory to process                            [array]
   -o, --out              output directory (must exist if specified)
   -f, --file             file to process                                 [array]
   -v, --verbose                                                          [count]
@@ -30,7 +29,7 @@ Examples
 Directory
 ```
 dc6png -p ~/diablo/data/global/palette/ACT1/pal.dat \
-  -d ~/diablo/data/global/items \
+  -f "~/diablo/data/global/**/*.dc6" \
   -o ./png
 ```
 

@@ -4,6 +4,8 @@ const path = require('path');
 const fs = require('fs');
 const jimp = require('jimp');
 const DC6 = require('./dc6');
+const glob = require('fast-glob');
+const { platform } = require('os');
 
 function readPalette(file) {
   const palette = [];
@@ -73,15 +75,6 @@ function processFile(file) {
   }
 }
 
-function processDirectory(dir) {
-  INFO(`Reading directory: ${dir}`);
-  const files = fs.readdirSync(dir)
-    .filter((file) => path.extname(file).toLowerCase() === ".dc6");
-  for(const file of files) {
-    processFile(path.join(dir, file));
-  }
-}
-
 const argv = require('yargs')
   .option('p', {
     alias: 'palette',
@@ -99,11 +92,6 @@ const argv = require('yargs')
     nargs: 1,
     describe: 'transform color. (0-20)',
     type: 'number'
-  })
-  .option('d', {
-    alias: 'dir',
-    describe: 'directory to process',
-    type: 'array'
   })
   .option('o', {
     alias: 'out',
@@ -142,14 +130,24 @@ if(argv.t) {
   global.transforms = readTransforms(path.resolve(argv.t));
 }
 
-if(argv.d) {
-  for(const dir of argv.d) {
-    processDirectory(path.resolve(dir));
-  }
-}
 
 if(argv.f) {
-  for(const file of argv.f) {
-    processFile(path.resolve(file));
+  for(let f of argv.f) {
+    //hacks to get glob working...
+    //turn the relative path to an absoulte one and use posix seperators since that
+    //is what the glob library supports.
+    DEBUG(`File glob: ${f}`)
+    f = path.resolve(f);
+    f = f.split(path.sep);
+    f = f.join(path.posix.sep);
+    let files = glob.sync(f, {
+      caseSensitiveMatch: false,
+      dot: true,
+      cwd: path.posix.sep
+    });
+    DEBUG(`Matches: [${files.join(', ')}]`);
+    for(const file of files) {
+      processFile(path.resolve(file));
+    }
   }
 }
