@@ -1,10 +1,24 @@
 class DC6 {
   
-  constructor(buffer) {
+  constructor() {
+  }
+
+  static from(buffer) {
+    let dc6 = new DC6();
+    dc6._parse(buffer);
+    return dc6;
+  }
+
+  _parse(buffer) {
     this.header = {
-      directions: buffer.readInt32LE(0x10),
-      framesPerDirection: buffer.readInt32LE(0x14)
+      version: buffer.readInt32LE(0x0),
+      flags: buffer.readUInt32LE(0x4),
+      encoding: buffer.readUInt32LE(0x8),
+      termination: buffer.readUInt32LE(0xc),
+      directions: buffer.readUInt32LE(0x10),
+      framesPerDirection: buffer.readUInt32LE(0x14),
     };
+    this.header.framePointers = new Array(this.header.directions * this.header.framesPerDirection);
     this.frames = new Array(this.header.directions);
     for(let i = 0; i < this.header.directions; i++) {
       this.frames[i] = new Array(this.header.framesPerDirection);
@@ -13,15 +27,16 @@ class DC6 {
   }
 
   _indexFrames(buffer) {
-    const nFrames = this.header.directions * this.header.framesPerDirection;
-    let frameOffsets = [];
-    for (let i = 0; i < nFrames; i += 1) {
-      frameOffsets.push(buffer.readUInt32LE(DC6.HEADER_SIZE + (0x4 * i)));
+    for (let i = 0; i < this.header.framePointers.length; i += 1) {
+      this.header.framePointers[i] = buffer.readUInt32LE(DC6.HEADER_SIZE + (0x4 * i));
     }
-    frameOffsets.push(buffer.length);
-    for (let i = 0, fo = 0; i < this.header.directions; i += 1) {
-      for (let j = 0; j < this.header.framesPerDirection; j += 1, fo += 1) {
-        this.frames[i][j] = new DC6Frame(buffer.slice(frameOffsets[fo], frameOffsets[fo + 1]));
+    for (let i = 0, c = 0; i < this.header.directions; i += 1) {
+      for (let j = 0; j < this.header.framesPerDirection; j += 1, c += 1) {
+        if(c < this.header.framePointers.length - 1) {
+          this.frames[i][j] = new DC6Frame(buffer.slice(this.header.framePointers[c], this.header.framePointers[c + 1]));
+        } else {
+          this.frames[i][j] = new DC6Frame(buffer.slice(this.header.framePointers[c]));
+        }
       }
     }
   }
@@ -32,12 +47,15 @@ class DC6Frame {
 
   constructor(buffer) {
     this.header = {
-      flip: buffer.readInt32LE(0x0),
-      width: buffer.readInt32LE(0x4),
-      height: buffer.readInt32LE(0x8),
+      flip: buffer.readUInt32LE(0x0),
+      width: buffer.readUInt32LE(0x4),
+      height: buffer.readUInt32LE(0x8),
       offsetX: buffer.readInt32LE(0xc),
       offsetY: buffer.readInt32LE(0x10),
-      length: buffer.readInt32LE(0x1c),
+      unk14: buffer.readUInt32LE(0x14),
+      nextBlock: buffer.readUInt32LE(0x18),
+      length: buffer.readUInt32LE(0x1c),
+      terminator: buffer.readUIntLE(buffer.length - 0x3, 0x3)
     };
     //indexed data
     this.data = [];
@@ -49,7 +67,7 @@ class DC6Frame {
     for (let i = 0; i < this.header.height; i += 1) {
       this.data[i] = Buffer.alloc(this.header.width);
     }
-    for (let i = 0; i < this.header.length;) {
+    for (let i = 0; i < this.header.length && y >= 0;) {
       let chunkSize = buffer.readUInt8(DC6Frame.HEADER_SIZE + i++);
       if (chunkSize === 0x80) { //eol
         x = 0, y -= 1;

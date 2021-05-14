@@ -5,7 +5,13 @@ const fs = require('fs');
 const jimp = require('jimp');
 const DC6 = require('./dc6');
 const glob = require('fast-glob');
-const { platform } = require('os');
+
+const OUTPUT_TYPES = {
+  'png': jimp.MIME_PNG,
+  'jpeg': jimp.MIME_JPEG,
+  'bmp': jimp.MIME_BMP,
+  'tiff': jimp.MIME_TIFF
+};
 
 function readPalette(file) {
   const palette = [];
@@ -48,29 +54,36 @@ function processFile(file) {
   INFO(`Reading file: ${file}`);
   const p = path.parse(file);
   const buffer = fs.readFileSync(file);
-  const dc6 = new DC6(buffer);
+  const dc6 = DC6.from(buffer);
   DEBUG(JSON.stringify(dc6.header));
   for(let i = 0; i < dc6.header.directions; i += 1) {
     for(let j = 0; j < dc6.header.framesPerDirection; j += 1) {
       const frame = dc6.frames[i][j];
+      DEBUG(`direction: ${i} frame: ${j}`);
       if(argv.c >= 0 && global.transforms) {
+        DEBUG(`transforming to color index ${argv.c} using ${argv.t}`);
         frame.transform(global.transforms[argv.c]);
       }
-      DEBUG(`direction: ${i} frame: ${j}`);
       DEBUG(JSON.stringify(frame.header));
       const image = getImageData(frame, global.palette);
-      image.getBuffer(jimp.MIME_PNG, function(err, b) {
-        if(err) {
-          throw err;
+      for(const mediaType of argv.m) {
+        if(!OUTPUT_TYPES[mediaType]) {
+          throw new Error(`Unknown media type output [${mediaType}].`);
         }
-        let name = `${p.name}.png`;
-        if(dc6.header.direction > 1 || dc6.header.framesPerDirection > 1) {
-          name = `${p.name}_${i}_${j}.png`;
-        }
-        const outfile = path.resolve(path.join(argv.o ? argv.o : p.dir, `${name}`));
-        INFO(`Writing file: ${outfile}`);
-        fs.writeFileSync(outfile, b);
-      });
+        image.getBuffer(OUTPUT_TYPES[mediaType], function(err, b) {
+          if(err) {
+            throw err;
+          }
+          let name = `${p.name}.`;
+          if(dc6.header.direction > 1 || dc6.header.framesPerDirection > 1) {
+            name = `${p.name}_${i}_${j}.`;
+          }
+          name += mediaType;
+          const outfile = path.resolve(path.join(argv.o ? argv.o : p.dir, `${name}`));
+          INFO(`Writing file: ${outfile}`);
+          fs.writeFileSync(outfile, b);
+        });
+      }
     }
   }
 }
@@ -79,13 +92,13 @@ const argv = require('yargs')
   .option('p', {
     alias: 'palette',
     nargs: 1,
-    describe: 'color palette. example: (/global/palette/ACT1/pal.dat)',
+    describe: 'color palette. ex: (ACT1/pal.dat)',
     demand: true
   })
   .option('t', {
     alias: 'transform',
     nargs: 1,
-    describe: 'transform file. example: (grey.dat)'
+    describe: 'transform file. ex: (grey.dat)'
   })
   .option('c', {
     alias: 'transform-color',
@@ -93,9 +106,9 @@ const argv = require('yargs')
     describe: 'transform color. (0-20)',
     type: 'number'
   })
-  .option('o', {
-    alias: 'out',
-    describe: 'output directory (must exist if specified)',
+  .option('d', {
+    alias: 'dir',
+    describe: 'output directory (must exist)',
     required: false,
     nargs: 1
   })
@@ -103,6 +116,13 @@ const argv = require('yargs')
     alias: 'file',
     describe: 'file to process',
     type: 'array'
+  })
+  .options('m', {
+    alias: 'media-type',
+    describe: 'media type to output',
+    type: 'array',
+    default: 'png',
+    choices: Object.keys(OUTPUT_TYPES)
   })
   .option('v', {
     alias: 'verbose',
@@ -151,3 +171,5 @@ if(argv.f) {
     }
   }
 }
+
+INFO("Success!");

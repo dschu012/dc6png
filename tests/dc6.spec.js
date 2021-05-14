@@ -6,7 +6,7 @@ const DC6 = require('../src/dc6');
 describe('DC6', function() {
   it('can parse', function() {
     const buffer = fs.readFileSync('./tests/data/global/items/invcap.DC6');
-    const result = new DC6(buffer);
+    const result = DC6.from(buffer);
     
     assert.strictEqual(1, result.header.directions);
     assert.strictEqual(1, result.header.framesPerDirection);
