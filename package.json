@@ -34,6 +34,6 @@
   ],
   "homepage": "https://github.com/dschu012/dc6png#readme",
   "devDependencies": {
-    "mocha": "^8.2.1"
+    "mocha": "^10.1.0"
   }
 }
